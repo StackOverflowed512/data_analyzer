@@ -21,7 +21,7 @@ class Settings:
     CHART_STYLE: str = "seaborn-v0_8"
     
     # Data Configuration
-    DEFAULT_DATASET_PATH: str = "data/automobile.csv"
+    DEFAULT_DATASET_PATH: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "sales_data_sample.csv")
     MAX_CHART_POINTS: int = 1000
     
     # API Configuration

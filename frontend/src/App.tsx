@@ -441,8 +441,21 @@ function App() {
         setState((prev) => ({ ...prev, showDatasetViewer: false }));
     };
 
-    const handleDatasetUpload = async (filename: string) => {
+    const handleDatasetUpload = async (filename: string, info?: DatasetInfo, preview?: any[]) => {
         console.log("📤 Dataset upload successful:", filename);
+
+        // Fetch refreshed example queries based on the new dataset
+        let newExampleQueries = state.exampleQueries;
+        try {
+            console.log("💡 Refreshing example queries for new dataset...");
+            const examplesResult = await apiService.getExampleQueries();
+            if (examplesResult.success) {
+                newExampleQueries = examplesResult.examples;
+            }
+        } catch (error) {
+            console.warn("⚠️ Failed to refresh example queries:", error);
+            // Keep existing or default queries if refresh fails
+        }
 
         setState((prev) => ({
             ...prev,
@@ -450,6 +463,10 @@ function App() {
             showFileUploader: false,
             analysisResult: null,
             isInitialized: true,
+            // Update dataset info and preview if provided
+            datasetInfo: info || prev.datasetInfo,
+            datasetPreview: preview || prev.datasetPreview,
+            exampleQueries: newExampleQueries,
         }));
 
         toast.success(`🚀 Ready to analyze "${filename}"!`, {
@@ -568,6 +585,7 @@ function App() {
                             onChartRequest={handleChartRequest}
                             onDatasetView={handleOpenDatasetViewer}
                             isAnalyzing={state.isAnalyzing}
+                            examples={state.exampleQueries}
                         />
 
                         <div className="w-full px-4 py-6">

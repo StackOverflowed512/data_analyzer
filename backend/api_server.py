@@ -38,7 +38,7 @@ app_initialized = False
 
 # Upload settings
 UPLOAD_FOLDER = tempfile.gettempdir()
-ALLOWED_EXTENSIONS = {'csv'}
+ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
@@ -182,7 +182,7 @@ def get_dataset_info():
         return jsonify({
             "success": True,
             "info": info,
-            "preview": preview.to_dict('records') if preview is not None else [],
+            "preview": data_processor.to_json_safe(preview),
             "column_statistics": column_stats
         })
     
@@ -236,7 +236,7 @@ def search_dataset():
         
         return jsonify({
             "success": True,
-            "results": result_df.to_dict('records') if result_df is not None else [],
+            "results": data_processor.to_json_safe(result_df),
             "count": len(result_df) if result_df is not None else 0
         })
     
@@ -263,7 +263,7 @@ def filter_dataset():
         
         return jsonify({
             "success": True,
-            "results": result_df.to_dict('records') if result_df is not None else [],
+            "results": data_processor.to_json_safe(result_df),
             "count": len(result_df) if result_df is not None else 0
         })
     
@@ -439,7 +439,7 @@ def analyze_query():
         response_data = {
             "success": True,
             "analysis": analysis_result,
-            "data": processed_data.to_dict('records'),
+            "data": data_processor.to_json_safe(processed_data),
             "data_count": len(processed_data),
             "columns": processed_data.columns.tolist(),
             "needs_chart": needs_chart
@@ -521,32 +521,40 @@ def download_data():
 @app.route('/api/example-queries', methods=['GET'])
 def get_example_queries():
     """Get example queries for the user."""
-    examples = [
-        {
-            "query": "show average price by brand",
-            "description": "Compare average car prices across different brands"
-        },
-        {
-            "query": "plot horsepower vs price",
-            "description": "Scatter plot showing relationship between horsepower and price"
-        },
-        {
-            "query": "display price distribution histogram",
-            "description": "Show distribution of car prices"
-        },
-        {
-            "query": "compare fuel efficiency by fuel type",
-            "description": "Compare miles per gallon between gas and diesel cars"
-        },
-        {
-            "query": "show engine size distribution",
-            "description": "Display histogram of engine sizes"
-        },
-        {
-            "query": "analyze price by body style",
-            "description": "Compare prices across different body styles"
-        }
-    ]
+    
+    # Try to generate dynamic suggestions based on loaded dataset
+    dynamic_suggestions = data_processor.generate_smart_suggestions()
+    
+    if dynamic_suggestions:
+        examples = dynamic_suggestions
+    else:
+        # Fallback to defaults if no dataset loaded
+        examples = [
+            {
+                "query": "show average price by brand",
+                "description": "Compare average car prices across different brands"
+            },
+            {
+                "query": "plot horsepower vs price",
+                "description": "Scatter plot showing relationship between horsepower and price"
+            },
+            {
+                "query": "display price distribution histogram",
+                "description": "Show distribution of car prices"
+            },
+            {
+                "query": "compare fuel efficiency by fuel type",
+                "description": "Compare miles per gallon between gas and diesel cars"
+            },
+            {
+                "query": "show engine size distribution",
+                "description": "Display histogram of engine sizes"
+            },
+            {
+                "query": "analyze price by body style",
+                "description": "Compare prices across different body styles"
+            }
+        ]
     
     return jsonify({
         "success": True,
@@ -565,7 +573,7 @@ def upload_dataset():
             return jsonify({"success": False, "error": "No file selected"}), 400
 
         if not allowed_file(file.filename):
-            return jsonify({"success": False, "error": "Only CSV files are allowed"}), 400
+            return jsonify({"success": False, "error": "Only CSV and XLSX files are allowed"}), 400
 
         # Save uploaded file temporarily
         temp_dir = tempfile.gettempdir()
@@ -693,14 +701,4 @@ if __name__ == '__main__':
     
     app.run(debug=debug, host='0.0.0.0', port=port)
 
-@app.post("/upload-file")
-async def upload_file(file: UploadFile = File(...)):
-    import tempfile, shutil
-    suffix = Path(file.filename).suffix
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = tmp.name
-    df, error = data_processor.load_dataset(tmp_path)
-    if error:
-        return {"success": False, "error": error}
-    return {"success": True, "columns": df.columns.tolist(), "path": tmp_path}
+

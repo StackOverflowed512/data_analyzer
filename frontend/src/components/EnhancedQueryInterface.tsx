@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   BarChart3,
@@ -11,11 +12,13 @@ import {
   Calendar,
   BarChart2,
   Car,
+  PieChart,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
+import type { ExampleQuery } from "../services/api";
 
 interface EnhancedQueryInterfaceProps {
   onAnalyze: (
@@ -26,6 +29,7 @@ interface EnhancedQueryInterfaceProps {
   onChartRequest: (chartType: string, query: string) => void;
   onDatasetView: () => void;
   isAnalyzing: boolean;
+  examples: ExampleQuery[];
 }
 
 const CHART_TYPES = [
@@ -39,40 +43,16 @@ const CHART_TYPES = [
   { id: "area", name: "Area Chart", description: "Cumulative data" },
 ];
 
-// Example queries with icons
-const EXAMPLE_QUERIES = [
-  {
-    text: "Show average price by brand",
-    icon: <DollarSign className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Display fuel type distribution as pie chart",
-    icon: <Fuel className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Compare horsepower vs price relationship",
-    icon: <Gauge className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Show price distribution across all cars",
-    icon: <CircleDot className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Show average price by fuel type",
-    icon: <TrendingUp className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "List top 10 most expensive cars",
-    icon: <Calendar className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Show average horsepower by body style",
-    icon: <Car className="h-4 w-4 text-white" />,
-  },
-  {
-    text: "Compare city vs highway MPG by brand",
-    icon: <BarChart2 className="h-4 w-4 text-white" />,
-  },
+const ICONS = [
+  DollarSign,
+  Fuel,
+  Gauge,
+  CircleDot,
+  TrendingUp,
+  Calendar,
+  Car,
+  BarChart2,
+  PieChart,
 ];
 
 export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
@@ -80,6 +60,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   onChartRequest,
   onDatasetView,
   isAnalyzing,
+  examples,
 }) => {
   const [query, setQuery] = useState("");
   const [selectedChartType, setSelectedChartType] = useState<string | null>(
@@ -228,16 +209,20 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
         <div className="text-sm">
           <p className="font-medium mb-2 text-white">💡Smart Suggestions:</p>
           <div className="flex flex-wrap gap-3">
-            {EXAMPLE_QUERIES.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => setQuery(q.text)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg text-white hover:bg-cyan-700 transition"
-              >
-                {q.icon}
-                <span>{q.text}</span>
-              </button>
-            ))}
+            {examples.map((q, idx) => {
+              const IconComponent = ICONS[idx % ICONS.length];
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setQuery(q.query)}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg text-white hover:bg-cyan-700 transition"
+                  title={q.description}
+                >
+                  <IconComponent className="h-4 w-4 text-white" />
+                  <span>{q.query}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </CardContent>

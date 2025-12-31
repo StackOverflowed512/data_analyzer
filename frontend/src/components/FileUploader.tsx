@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 
 interface FileUploaderProps {
-    onUploadSuccess: (filename: string) => void;
+    onUploadSuccess: (filename: string, info?: any, preview?: any[]) => void;
     onUploadError: (error: string) => void;
     isLoading?: boolean;
 }
@@ -52,9 +52,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
     const handleFileSelect = async (file: File) => {
         // Validate file type
-        if (!file.name.endsWith(".csv")) {
-            onUploadError("Please select a CSV file (.csv)");
-            toast.error("❌ Only CSV files are supported");
+        if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx")) {
+            onUploadError("Please select a CSV or Excel file (.csv, .xlsx)");
+            toast.error("❌ Only CSV and Excel files are supported");
             return;
         }
 
@@ -128,7 +128,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                         },
                     }
                 );
-                onUploadSuccess(file.name);
+                onUploadSuccess(file.name, result.info, result.preview);
             } else {
                 throw new Error(result.error || "Upload failed");
             }
@@ -172,7 +172,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                     <Upload className="h-5 w-5" />
-                    Upload CSV Dataset
+                    Upload Dataset
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -190,7 +190,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv"
+                        accept=".csv,.xlsx"
                         onChange={handleFileInputChange}
                         className="hidden"
                         disabled={isUploading || isLoading}
@@ -211,14 +211,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                             <Upload className="h-8 w-8 text-gray-400 mx-auto" />
                             <div>
                                 <p className="text-gray-700 font-medium">
-                                    Drag and drop your CSV file here
+                                    Drag and drop your file here
                                 </p>
                                 <p className="text-gray-500 text-sm mt-1">
                                     or click to browse
                                 </p>
                             </div>
                             <p className="text-gray-400 text-xs">
-                                CSV files up to 50MB are supported
+                                CSV and XLSX files up to 50MB are supported
                             </p>
                         </div>
                     )}
@@ -227,7 +227,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 <div className="mt-4 space-y-2 text-sm text-gray-600">
                     <p className="font-medium text-gray-700">Requirements:</p>
                     <ul className="list-disc list-inside space-y-1 text-gray-600">
-                        <li>File must be in CSV format (.csv)</li>
+                        <li>File must be in CSV or XLSX format</li>
                         <li>Maximum file size: 50MB</li>
                         <li>First row should contain column headers</li>
                         <li>Supports text and numeric data</li>

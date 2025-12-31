@@ -46,49 +46,62 @@ class DataProcessor:
             
             logger.info(f"Loading dataset from: {path_to_load}")
             
-            # Detect encoding more robustly
-            detected_encoding = 'utf-8'
-            try:
-                with open(path_to_load, 'rb') as f:
-                    raw_data = f.read(100000)  # Read more data for better detection
-                    result = chardet.detect(raw_data)
-                    if result and result.get('encoding'):
-                        detected_encoding = result['encoding']
-                        logger.info(f"Detected encoding: {detected_encoding} (confidence: {result.get('confidence', 0)})")
-            except Exception as e:
-                logger.warning(f"Could not detect encoding, will try fallback encodings: {str(e)}")
-            
-            # Try encodings in order of likelihood
-            encodings_to_try = [
-                detected_encoding,
-                'utf-8',
-                'utf-8-sig',  # UTF-8 with BOM
-                'latin-1',
-                'cp1252',
-                'iso-8859-1',
-                'ascii'
-            ]
-            
-            # Remove duplicates while preserving order
-            encodings_to_try = list(dict.fromkeys(encodings_to_try))
+            # Determine file type
+            is_excel = path_to_load.lower().endswith(('.xlsx', '.xls'))
             
             self.df = None
             last_error = None
             
-            for encoding in encodings_to_try:
+            if is_excel:
                 try:
-                    logger.info(f"Attempting to load with encoding: {encoding}")
-                    self.df = pd.read_csv(path_to_load, encoding=encoding, on_bad_lines='skip')
-                    logger.info(f"Successfully loaded CSV with encoding: {encoding}")
-                    break
-                except (UnicodeDecodeError, LookupError) as e:
-                    logger.debug(f"Failed to load with {encoding}: {str(e)}")
+                    logger.info(f"Attempting to load Excel file: {path_to_load}")
+                    self.df = pd.read_excel(path_to_load)
+                    logger.info("Successfully loaded Excel file")
+                except Exception as e:
+                    logger.error(f"Failed to load Excel file: {str(e)}")
                     last_error = e
-                    continue
+                    return False
+            else:
+                # Detect encoding more robustly for CSV
+                detected_encoding = 'utf-8'
+                try:
+                    with open(path_to_load, 'rb') as f:
+                        raw_data = f.read(100000)  # Read more data for better detection
+                        result = chardet.detect(raw_data)
+                        if result and result.get('encoding'):
+                            detected_encoding = result['encoding']
+                            logger.info(f"Detected encoding: {detected_encoding} (confidence: {result.get('confidence', 0)})")
+                except Exception as e:
+                    logger.warning(f"Could not detect encoding, will try fallback encodings: {str(e)}")
+                
+                # Try encodings in order of likelihood
+                encodings_to_try = [
+                    detected_encoding,
+                    'utf-8',
+                    'utf-8-sig',  # UTF-8 with BOM
+                    'latin-1',
+                    'cp1252',
+                    'iso-8859-1',
+                    'ascii'
+                ]
+                
+                # Remove duplicates while preserving order
+                encodings_to_try = list(dict.fromkeys(encodings_to_try))
+                
+                for encoding in encodings_to_try:
+                    try:
+                        logger.info(f"Attempting to load with encoding: {encoding}")
+                        self.df = pd.read_csv(path_to_load, encoding=encoding, on_bad_lines='skip')
+                        logger.info(f"Successfully loaded CSV with encoding: {encoding}")
+                        break
+                    except (UnicodeDecodeError, LookupError) as e:
+                        logger.debug(f"Failed to load with {encoding}: {str(e)}")
+                        last_error = e
+                        continue
         
             # Validate dataframe
             if self.df is None or self.df.empty:
-                error_msg = f"Dataset is empty after trying all encodings. Last error: {str(last_error)}"
+                error_msg = f"Dataset is empty after loading. Last error: {str(last_error)}"
                 logger.error(error_msg)
                 return False
             
@@ -101,7 +114,7 @@ class DataProcessor:
             return True
             
         except pd.errors.ParserError as e:
-            logger.error(f"CSV parsing error: {str(e)}")
+            logger.error(f"Parsing error: {str(e)}")
             return False
         except Exception as e:
             logger.error(f"Failed to load dataset: {str(e)}")
@@ -302,7 +315,7 @@ class DataProcessor:
         page_data = self.df.iloc[start_idx:end_idx]
         
         return {
-            "data": page_data.to_dict('records'),
+            "data": self.to_json_safe(page_data),
             "pagination": {
                 "current_page": page,
                 "page_size": page_size,
@@ -463,6 +476,82 @@ class DataProcessor:
         
         return cleaned_records
 
+
+    
+    def generate_smart_suggestions(self) -> List[Dict[str, str]]:
+        """
+        Generate smart suggested queries based on dataset columns.
+        
+        Returns:
+            List of dictionaries with 'query' and 'description' keys
+        """
+        if self.df is None or not self.columns:
+            return []
+            
+        suggestions = []
+        
+        # Classify columns
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_cols = self.df.select_dtypes(include=['object', 'category']).columns.tolist()
+        
+        # 1. Distribution of a categorical column
+        if categorical_cols:
+            col = categorical_cols[0]
+            suggestions.append({
+                "query": f"Show distribution of {col}", 
+                "description": f"View how many items belong to each {col}"
+            })
+            
+            if len(categorical_cols) > 1:
+                col2 = categorical_cols[1]
+                suggestions.append({
+                    "query": f"Show {col2} counts as bar chart",
+                    "description": f"Bar chart showing frequency of {col2}"
+                })
+
+        # 2. Average of numeric by categorical
+        if numeric_cols and categorical_cols:
+            num = numeric_cols[0]
+            cat = categorical_cols[0]
+            suggestions.append({
+                "query": f"Show average {num} by {cat}",
+                "description": f"Compare average {num} across different {cat}"
+            })
+            
+            if len(numeric_cols) > 1:
+                num2 = numeric_cols[1]
+                suggestions.append({
+                    "query": f"Compare {num2} by {cat}",
+                    "description": f"Analyze {num2} statistics for each {cat}"
+                })
+
+        # 3. Correlation/Scatter plot (Numeric vs Numeric)
+        if len(numeric_cols) >= 2:
+            num1 = numeric_cols[0]
+            num2 = numeric_cols[1]
+            suggestions.append({
+                "query": f"Plot {num1} vs {num2}",
+                "description": f"Scatter plot showing relationship between {num1} and {num2}"
+            })
+        
+        # 4. Top/Bottom analysis
+        if numeric_cols and categorical_cols:
+            num = numeric_cols[0]
+            cat = categorical_cols[0]
+            suggestions.append({
+                "query": f"Top 10 {cat} with highest {num}",
+                "description": f"List the top performing {cat} based on {num}"
+            })
+
+        # 5. Histogram of numeric
+        if numeric_cols:
+            col = numeric_cols[0]
+            suggestions.append({
+                "query": f"Show distribution of {col}",
+                "description": f"Histogram showing how {col} is distributed"
+            })
+            
+        return suggestions[:8]  # Return top 8 suggestions
 
 # Global data processor instance
 data_processor = DataProcessor()
