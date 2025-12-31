@@ -190,7 +190,7 @@ Rules:
 - "sort_by" should be a column name, "sort_order" can be "asc" or "desc".
 - "columns_only" should be an array of column names when user asks for specific columns only.
 - For histogram charts, only specify "x" column, "y" should be null.
-- For scatter plots, both "x" and "y" are required.
+- For scatter, line, area, and violin plots, both "x" and "y" are required.
 - If the automobile query is unclear or cannot be fulfilled, respond with:
 {{"error": "Cannot determine appropriate chart type or columns for this automobile data query"}}
 
@@ -343,6 +343,13 @@ Respond with JSON only:"""
             
         if "y" in result and result["y"] and result["y"] not in columns:
             return {"error": f"Column '{result['y']}' not found in dataset"}
+            
+        # Validate specific chart requirements
+        if result["chart"] in ["scatter", "line", "area", "violin", "box"]:
+            # These charts generally require both x and y, or at least y for box/violin depending on orientation
+            # But for consistency with chart_generator, we enforce y for these if chart_generator requires it
+            if not result.get("y") and result["chart"] in ["scatter", "line", "area", "violin"]:
+                return {"error": f"{result['chart'].title()} chart requires both 'x' and 'y' columns"}
             
         # Validate aggregation method
         if "agg" in result and result["agg"]:

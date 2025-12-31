@@ -248,16 +248,30 @@ class ChartGenerator:
                     fig = px.box(data, y=x_col)
                     
             elif chart_type == "violin":
-                if not y_col:
-                    return None, "Violin plot requires both x and y columns"
-                fig = px.violin(data, x=x_col, y=y_col, box=True)
+                # Relaxed validation: Allow violin with just x or y (distribution)
+                if y_col:
+                    fig = px.violin(data, x=x_col if x_col else None, y=y_col, box=True)
+                elif x_col:
+                    fig = px.violin(data, x=x_col, box=True, orientation='h')
+                else:
+                    return None, "Violin plot requires at least one column (x or y)"
                 
             elif chart_type == "area":
                 if not y_col:
-                    return None, "Area plot requires both x and y columns"
-                
-                sorted_data = data.sort_values(x_col)
-                fig = px.area(sorted_data, x=x_col, y=y_col)
+                    # If only x is present, we can plot counts if it is categorical or histogram-like
+                    # Or treat it as a line chart of counts
+                    if x_col:
+                        # Assuming we want area under the curve of counts?
+                        # Or if the user asked for area chart of a single variable, they might mean distribution
+                        # Let's try to plot freq/value counts as area
+                       value_counts = data[x_col].value_counts().sort_index()
+                       fig = px.area(x=value_counts.index, y=value_counts.values)
+                       fig.update_layout(xaxis_title=x_col, yaxis_title="Count")
+                    else:
+                        return None, "Area plot requires at least x column"
+                else:
+                    sorted_data = data.sort_values(x_col)
+                    fig = px.area(sorted_data, x=x_col, y=y_col)
                 
             elif chart_type == "heatmap":
                 # Create correlation heatmap for numeric columns

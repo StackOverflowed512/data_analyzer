@@ -389,7 +389,7 @@ def analyze_query():
         print(f"📋 Available columns: {columns}")
         
         # Check if query explicitly asks for a chart
-        chart_keywords = ['chart', 'plot', 'graph', 'visualize', 'visualization', 'bar', 'pie', 'line', 'scatter', 'histogram', 'box', 'heatmap']
+        chart_keywords = ['chart', 'plot', 'graph', 'visualize', 'visualization', 'bar', 'pie', 'line', 'scatter', 'histogram', 'box', 'heatmap', 'violin', 'area']
         needs_chart = force_chart or any(keyword in user_query.lower() for keyword in chart_keywords)
         
         print(f"📊 Needs chart: {needs_chart}")
