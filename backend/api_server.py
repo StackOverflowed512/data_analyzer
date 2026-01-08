@@ -619,6 +619,50 @@ def upload_dataset():
             "error": f"Server error: {str(e)}"
         }), 500
 
+@app.route('/api/datasets', methods=['GET'])
+def list_datasets():
+    """List all available datasets."""
+    try:
+        datasets = data_processor.list_datasets()
+        return jsonify({
+            "success": True,
+            "datasets": datasets,
+            "current_dataset_id": data_processor.current_dataset_id
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to list datasets: {str(e)}"
+        }), 500
+
+@app.route('/api/dataset/switch', methods=['POST'])
+def switch_dataset():
+    """Switch to a specific dataset."""
+    try:
+        data = request.get_json()
+        dataset_id = data.get('id')
+        
+        if not dataset_id:
+            return jsonify({"success": False, "error": "Dataset ID required"}), 400
+            
+        if data_processor.load_dataset_by_id(dataset_id):
+            return jsonify({
+                "success": True,
+                "message": f"Switched to dataset {data_processor.current_dataset_name}",
+                "info": data_processor.get_dataset_info()
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to load dataset. ID may be invalid."
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Switch failed: {str(e)}"
+        }), 500
+
 @app.route('/api/reinitialize', methods=['POST'])
 def reinitialize():
     """Reinitialize app with currently loaded dataset."""

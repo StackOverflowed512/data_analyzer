@@ -65,7 +65,7 @@ function App() {
         isAnalyzing: false,
         exampleQueries: [],
         showDatasetViewer: false,
-        currentDatasetName: "Automobile Dataset",
+        currentDatasetName: "Loading...",
         showFileUploader: false,
     });
 
@@ -175,6 +175,7 @@ function App() {
                 datasetInfo: datasetResult.info,
                 datasetPreview: datasetResult.preview,
                 exampleQueries,
+                currentDatasetName: datasetResult.info?.name || "Automobile Dataset" 
             }));
 
             toast.success("🚀 Ready to analyze your data!", {
@@ -478,6 +479,25 @@ function App() {
         });
     };
 
+    const handleDatasetSwitch = (name: string, info: any) => {
+        setState((prev) => ({
+            ...prev,
+            currentDatasetName: name,
+            datasetInfo: info,
+            // Reset state that depends on dataset
+            analysisResult: null,
+            isAnalyzing: false,
+            // You might want to refresh dataset preview here too if you had a separate API for it
+        }));
+        
+        // Refresh example queries for the switched dataset
+        apiService.getExampleQueries().then(result => {
+             if (result.success) {
+                 setState(prev => ({ ...prev, exampleQueries: result.examples }));
+             }
+        }).catch(err => console.warn("Failed to refresh example queries", err));
+    };
+
     const handleUploadError = (error: string) => {
         console.error("❌ Upload error:", error);
         toast.error(error, {
@@ -548,6 +568,9 @@ function App() {
                         showFileUploader: !prev.showFileUploader,
                     }))
                 }
+                currentDatasetName={state.currentDatasetName}
+                currentDatasetId={state.datasetInfo?.id}
+                onDatasetSwitch={handleDatasetSwitch}
             />
 
             {state.showDatasetViewer && state.datasetInfo && (

@@ -8,6 +8,8 @@ from pathlib import Path
 import chardet
 
 from config.settings import settings
+from sqlalchemy import create_engine, text
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +28,158 @@ class DataProcessor:
         self.dataset_path = dataset_path or settings.DEFAULT_DATASET_PATH
         self.df: Optional[pd.DataFrame] = None
         self.columns: List[str] = []
+        self.current_dataset_id: Optional[int] = None
+        self.current_dataset_name: Optional[str] = None
+        
+        # Database configuration
+        self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.db_path = os.path.join(self.data_dir, "app_database.db")
+        self.db_engine = create_engine(f"sqlite:///{self.db_path}")
+        
+        # Initialize metadata table
+        self._init_db()
+
+    def _init_db(self):
+        """Initialize database tables."""
+        try:
+            with self.db_engine.connect() as conn:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS datasets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename TEXT NOT NULL,
+                        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        row_count INTEGER,
+                        column_count INTEGER,
+                        columns TEXT
+                    )
+                """))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {str(e)}")
+
+    def save_dataset(self, filename: str) -> bool:
+        """Save current dataframe as a new dataset in database."""
+        if self.df is None:
+            return False
+        try:
+            import json
+            from datetime import datetime
+            
+            # Save actual data to a new table or overwrite distinct one
+            # We'll create a new entry every time for history, or we could check for duplicates.
+            # For this request: "all datasets uploaded". So we add a new one.
+            
+            # 1. Insert metadata
+            columns_json = json.dumps(self.columns)
+            with self.db_engine.connect() as conn:
+                result = conn.execute(text("""
+                    INSERT INTO datasets (filename, row_count, column_count, columns, upload_date)
+                    VALUES (:filename, :row_count, :col_count, :columns, :date)
+                """), {
+                    "filename": filename,
+                    "row_count": len(self.df),
+                    "col_count": len(self.columns),
+                    "columns": columns_json,
+                    "date": datetime.now()
+                })
+                dataset_id = result.lastrowid
+                conn.commit()
+            
+            # 2. Save data to specific table
+            table_name = f"dataset_{dataset_id}"
+            self.df.to_sql(table_name, self.db_engine, if_exists='replace', index=False)
+            
+            self.current_dataset_id = dataset_id
+            self.current_dataset_name = filename
+            
+            logger.info(f"Dataset '{filename}' saved with ID {dataset_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save dataset to database: {str(e)}")
+            return False
+
+    def list_datasets(self) -> List[Dict[str, Any]]:
+        """List all available datasets."""
+        try:
+            with self.db_engine.connect() as conn:
+                result = conn.execute(text("SELECT id, filename, upload_date, row_count, column_count FROM datasets ORDER BY upload_date DESC"))
+                datasets = []
+                for row in result:
+                    datasets.append({
+                        "id": row[0],
+                        "filename": row[1],
+                        "upload_date": str(row[2]),
+                        "row_count": row[3],
+                        "column_count": row[4]
+                    })
+                return datasets
+        except Exception as e:
+            logger.error(f"Failed to list datasets: {str(e)}")
+            return []
+
+    def load_dataset_by_id(self, dataset_id: int) -> bool:
+        """Load a specific dataset from database by ID."""
+        try:
+            # Get metadata
+            with self.db_engine.connect() as conn:
+                result = conn.execute(text("SELECT filename FROM datasets WHERE id = :id"), {"id": dataset_id})
+                row = result.fetchone()
+                if not row:
+                    logger.error(f"Dataset ID {dataset_id} not found")
+                    return False
+                filename = row[0]
+
+            # Load data
+            table_name = f"dataset_{dataset_id}"
+            self.df = pd.read_sql(table_name, self.db_engine)
+            
+            if self.df is None or self.df.empty:
+                return False
+                
+            self.columns = self.df.columns.tolist()
+            self.current_dataset_id = dataset_id
+            self.current_dataset_name = filename
+            
+            logger.info(f"Loaded dataset '{filename}' (ID: {dataset_id}) from database")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to load dataset by ID: {str(e)}")
+            return False
+
+    def load_from_db(self) -> bool:
+        """Load most recent dataset from database."""
+        try:
+            if not os.path.exists(self.db_path):
+                return False
+                
+            # Find most recent dataset
+            with self.db_engine.connect() as conn:
+                # Check for legacy table first (from previous step)
+                # If 'datasets' table doesn't exist but 'dataset' does, migrate or just load 'dataset'
+                # But we initialized 'datasets' in __init__, so it exists.
+                
+                result = conn.execute(text("SELECT id FROM datasets ORDER BY upload_date DESC LIMIT 1"))
+                row = result.fetchone()
+                
+                if row:
+                    return self.load_dataset_by_id(row[0])
+                else:
+                    # Fallback for checking if legacy 'dataset' table exists from previous step
+                    # To allow smooth transition if app was running
+                    result_legacy = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='dataset'"))
+                    if result_legacy.fetchone():
+                        logger.info("Found legacy 'dataset' table, loading it...")
+                        self.df = pd.read_sql('dataset', self.db_engine)
+                        self.columns = self.df.columns.tolist()
+                        self.current_dataset_name = "Restored Session"
+                        # We could migrate it to new structure here, but let's just use it
+                        return True
+                        
+            return False
+        except Exception as e:
+            logger.error(f"Failed to load from database: {str(e)}")
+            return False
         
     def load_dataset(self, dataset_path: Optional[str] = None) -> bool:
         """
@@ -38,6 +192,11 @@ class DataProcessor:
             True if successful, False otherwise
         """
         try:
+            # If no specific path provided, try loading from DB first
+            if dataset_path is None:
+                if self.load_from_db():
+                    return True
+            
             path_to_load = dataset_path or self.dataset_path
             
             if not Path(path_to_load).exists():
@@ -111,6 +270,10 @@ class DataProcessor:
             logger.info(f"Dataset loaded successfully: {len(self.df)} rows, {len(self.columns)} columns")
             logger.info(f"Columns: {self.columns}")
             
+            # Save to database for persistence
+            filename = os.path.basename(path_to_load) if path_to_load else "Uploaded Dataset"
+            self.save_dataset(filename)
+            
             return True
             
         except pd.errors.ParserError as e:
@@ -134,13 +297,19 @@ class DataProcessor:
         if self.df is None:
             return {"error": "Dataset not loaded"}
             
+        missing_values = self.df.isnull().sum().to_dict()
+        # Convert numpy ints to standard python ints for json serialization
+        missing_values = {k: int(v) for k, v in missing_values.items()}
+        
         return {
-            "rows": len(self.df),
-            "columns": len(self.columns),
+            "name": self.current_dataset_name or "Unknown Dataset",
+            "id": self.current_dataset_id,
+            "rows": int(len(self.df)),
+            "columns": int(len(self.columns)),
             "column_names": self.columns,
             "numeric_columns": self.df.select_dtypes(include=[np.number]).columns.tolist(),
             "categorical_columns": self.df.select_dtypes(include=['object']).columns.tolist(),
-            "missing_values": self.df.isnull().sum().to_dict()
+            "missing_values": missing_values
         }
     
     def process_data_for_chart(self, chart_specs: Dict[str, Any]) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
@@ -357,9 +526,17 @@ class DataProcessor:
                     "std": float(self.df[col].std())
                 })
             else:
+                top_values = self.df[col].value_counts().head(5).to_dict()
+                # Convert keys and values to standard python types
+                cleaned_top_values = {}
+                for k, v in top_values.items():
+                    key = str(k) # Ensure key is string
+                    val = int(v) # Ensure count is int
+                    cleaned_top_values[key] = val
+                    
                 col_stats.update({
                     "data_type": "categorical",
-                    "top_values": self.df[col].value_counts().head(5).to_dict()
+                    "top_values": cleaned_top_values
                 })
             
             stats[col] = col_stats

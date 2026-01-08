@@ -2,16 +2,24 @@ import React from "react";
 import { BarChart3, Trash2, Upload } from "lucide-react";
 import { Button } from "./ui/button";
 
+import DatasetSelector from "./DatasetSelector";
+
 interface NavbarProps {
     onClearHistory: () => void;
     historyCount: number;
     onToggleFileUploader?: () => void;
+    currentDatasetName: string;
+    currentDatasetId?: number;
+    onDatasetSwitch: (name: string, info: any) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
     onClearHistory,
     historyCount,
     onToggleFileUploader,
+    currentDatasetName = "Dataset",
+    currentDatasetId,
+    onDatasetSwitch,
 }) => {
     return (
         <nav className="glass border-b border-white/20 backdrop-blur-xl sticky top-0 z-40">
@@ -23,6 +31,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <h1 className="text-2xl font-bold text-white">
                             Data Analysis Hub
                         </h1>
+                    </div>
+
+                    {/* Center section - Dataset Selector */}
+                     <div className="flex-1 flex justify-center px-4">
+                        <DatasetSelector 
+                            currentDatasetName={currentDatasetName}
+                            currentDatasetId={currentDatasetId}
+                            onDatasetSwitch={onDatasetSwitch}
+                        />
                     </div>
 
                     {/* Right section */}

@@ -24,6 +24,8 @@ axiosInstance.interceptors.response.use(
 );
 
 export interface DatasetInfo {
+    id?: number;
+    name?: string;
     rows: number;
     columns: number;
     column_names: string[];
@@ -56,6 +58,21 @@ export interface AnalysisResult {
 export interface ExampleQuery {
     query: string;
     description: string;
+}
+
+export interface DatasetItem {
+    id: number;
+    filename: string;
+    upload_date: string;
+    row_count: number;
+    column_count: number;
+}
+
+export interface DatasetListResult {
+    success: boolean;
+    datasets: DatasetItem[];
+    current_dataset_id: number | null;
+    error?: string;
 }
 
 class ApiService {
@@ -305,6 +322,21 @@ class ApiService {
         error?: string;
     }> {
         const response = await this.axiosInstance.post("/api/reinitialize");
+        return response.data;
+    }
+
+    async listDatasets(): Promise<DatasetListResult> {
+        const response = await this.axiosInstance.get("/api/datasets");
+        return response.data;
+    }
+
+    async switchDataset(id: number): Promise<{
+        success: boolean;
+        message?: string;
+        info?: DatasetInfo;
+        error?: string;
+    }> {
+        const response = await this.axiosInstance.post("/api/dataset/switch", { id });
         return response.data;
     }
 }
