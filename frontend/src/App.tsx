@@ -175,7 +175,7 @@ function App() {
                 datasetInfo: datasetResult.info,
                 datasetPreview: datasetResult.preview,
                 exampleQueries,
-                currentDatasetName: datasetResult.info?.name || "Automobile Dataset" 
+                currentDatasetName: datasetResult.info?.name || "Dataset" 
             }));
 
             toast.success("🚀 Ready to analyze your data!", {
@@ -290,16 +290,12 @@ function App() {
             } else {
                 const errorMessage = result.error || "Analysis failed";
                 if (
-                    errorMessage
-                        .toLowerCase()
-                        .includes("unrelated to automobile") ||
-                    errorMessage
-                        .toLowerCase()
-                        .includes("not about automobiles") ||
-                    errorMessage.toLowerCase().includes("automobile data query")
+                    errorMessage.toLowerCase().includes("unrelated to the dataset") ||
+                    errorMessage.toLowerCase().includes("not about the dataset") ||
+                    errorMessage.toLowerCase().includes("cannot determine appropriate chart")
                 ) {
                     toast.error(
-                        "🚗 Please ask questions related to automobile data (cars, vehicles, specifications, etc.)",
+                        "Please ask questions related to the dataset.",
                         {
                             style: {
                                 background: "rgba(245, 158, 11, 0.9)",
@@ -384,16 +380,12 @@ function App() {
             } else {
                 const errorMessage = result.error || "Chart creation failed";
                 if (
-                    errorMessage
-                        .toLowerCase()
-                        .includes("unrelated to automobile") ||
-                    errorMessage
-                        .toLowerCase()
-                        .includes("not about automobiles") ||
-                    errorMessage.toLowerCase().includes("automobile data query")
+                    errorMessage.toLowerCase().includes("unrelated to the dataset") ||
+                    errorMessage.toLowerCase().includes("not about the dataset") ||
+                    errorMessage.toLowerCase().includes("cannot determine appropriate chart")
                 ) {
                     toast.error(
-                        "🚗 Please ask questions related to automobile data for chart creation",
+                        "Please ask questions related to the dataset for chart creation",
                         {
                             style: {
                                 background: "rgba(245, 158, 11, 0.9)",

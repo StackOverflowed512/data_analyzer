@@ -136,7 +136,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <BarChart3 className="h-5 w-5" />
-          Ask Your Questions About Automobile Dataset
+          Ask Your Questions About the Dataset
         </CardTitle>
         <Button
           onClick={onDatasetView}
@@ -190,7 +190,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask anything about the automobile data..."
+            placeholder="Ask anything about the data..."
             onKeyDown={handleKeyDown}
             disabled={isAnalyzing}
           />

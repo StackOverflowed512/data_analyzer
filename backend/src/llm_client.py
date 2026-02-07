@@ -44,21 +44,21 @@ class MistralClient:
         if sample_data is not None and len(sample_data) > 0:
             sample_str = "\nSample data:\n" + sample_data.to_string(index=False)
         
-        prompt = f"""You are a friendly and knowledgeable assistant for an AUTOMOBILE DATASET.
+        prompt = f"""You are a friendly and knowledgeable assistant for a DATASET.
 
 Dataset Information:
-- This dataset contains information about {len(columns)} different aspects of automobiles
+- This dataset contains information about {len(columns)} different attributes
 - Available columns: {columns_str}
 {sample_str}
 
 User Query: "{user_query}"
 
 Instructions:
-1. If the query is related to automobiles, cars, vehicles, or this dataset, provide a helpful, conversational response.
-2. You can explain data insights, answer questions about car specifications, pricing trends, etc.
-3. If the user asks about specific data (like "show me BMW cars"), explain what information is available but suggest they use the dataset viewer or create charts for detailed data.
-4. If the query is completely unrelated to automobiles, politely redirect them to ask about cars/vehicles.
-5. Keep responses friendly, informative, and focused on the automobile domain.
+1. Provide a helpful, conversational response based on the dataset.
+2. You can explain data insights, trends, and relationships between columns.
+3. If the user asks about specific data, explain what information is available.
+4. If the query is completely unrelated to the dataset, politely redirect them to ask about the available data.
+5. Keep responses friendly, informative, and focused on the data.
 6. Suggest using charts when appropriate: "You might want to create a [chart type] to visualize this data."
 
 Respond in a conversational, helpful manner. No JSON format needed - just natural text."""
@@ -93,7 +93,7 @@ Respond in a conversational, helpful manner. No JSON format needed - just natura
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a helpful assistant specializing in automobile data analysis. Provide conversational, informative responses."
+                        "content": "You are a helpful assistant specializing in data analysis. Provide conversational, informative responses."
                     },
                     {
                         "role": "user", 
@@ -145,22 +145,22 @@ Respond in a conversational, helpful manner. No JSON format needed - just natura
         """Create a structured prompt for data analysis."""
         columns_str = ", ".join(columns)
         
-        prompt = f"""You are a Data Analysis and Visualization Assistant for an AUTOMOBILE DATASET ONLY.
+        prompt = f"""You are a Data Analysis and Visualization Assistant for a DATASET.
 
 You are given:
-1. A dataset containing automobile information. The columns include:
+1. A dataset containing information. The columns include:
 {columns_str}
 
 2. A natural language query from the user: "{user_query}"
 
-IMPORTANT: This dataset is ONLY about automobiles/cars. If the user's query is about anything else (weather, sports, food, politics, general questions, etc.), you MUST respond with an error.
+IMPORTANT: Focus ONLY on this dataset. If the user's query is about anything else (weather, sports, politics, general questions, etc.) that cannot be answered from the data, you MUST respond with an error.
 
 Your task:
-1. FIRST: Check if the query is related to automobiles, cars, vehicles, or data analysis of this automotive dataset.
-2. If the query is NOT about automobiles/cars/vehicles, respond with:
-{{"error": "This query appears to be unrelated to automobile data. Please ask questions about cars, vehicle specifications, pricing, fuel efficiency, or other automotive topics."}}
+1. FIRST: Check if the query is related to the dataset or data analysis.
+2. If the query is NOT about the dataset, respond with:
+{{"error": "This query appears to be unrelated to the dataset. Please ask questions about the available data columns."}}
 
-3. If the query IS about automobiles, then:
+3. If the query IS about the dataset, then:
 - Understand the query.
 - Determine the best chart type (choose from: bar, scatter, histogram, line, pie, box, violin, area, heatmap).
 - Determine which columns should be used as x-axis and y-axis.
@@ -171,12 +171,12 @@ Your task:
 
 {{
   "chart": "bar",
-  "x": "brand",
-  "y": "price",
+  "x": "category",
+  "y": "value",
   "agg": "mean",
-  "sort_by": "engine_size",
+  "sort_by": "value",
   "sort_order": "desc",
-  "columns_only": ["brand"]
+  "columns_only": ["category"]
 }}
 
 Important data type rules:
@@ -191,16 +191,15 @@ Rules:
 - "columns_only" should be an array of column names when user asks for specific columns only.
 - For histogram charts, only specify "x" column, "y" should be null.
 - For scatter, line, area, and violin plots, both "x" and "y" are required.
-- If the automobile query is unclear or cannot be fulfilled, respond with:
-{{"error": "Cannot determine appropriate chart type or columns for this automobile data query"}}
+- If the query is unclear or cannot be fulfilled with the available data, respond with:
+{{"error": "Cannot determine appropriate chart type or columns for this query"}}
 
-Examples of VALID automobile queries:
+Examples of VALID queries (assuming columns exist):
 - "Show average price by brand" → {{"chart": "bar", "x": "brand", "y": "price", "agg": "mean"}}
-- "All brands sorted by engine size" → {{"chart": "bar", "x": "brand", "y": "engine_size", "sort_by": "engine_size", "sort_order": "desc"}}
-- "Show brand only" → {{"chart": "bar", "x": "brand", "columns_only": ["brand"]}}
-- "Plot fuel efficiency vs engine size" → {{"chart": "scatter", "x": "engine_size", "y": "city_mpg"}}
-- "Display horsepower distribution" → {{"chart": "histogram", "x": "horsepower"}}
-- "Compare sedan vs hatchback prices" → {{"chart": "bar", "x": "body_style", "y": "price", "agg": "mean"}}
+- "All items sorted by size" → {{"chart": "bar", "x": "item", "y": "size", "sort_by": "size", "sort_order": "desc"}}
+- "Show product only" → {{"chart": "bar", "x": "product", "columns_only": ["product"]}}
+- "Plot sales vs profit" → {{"chart": "scatter", "x": "sales", "y": "profit"}}
+- "Display age distribution" → {{"chart": "histogram", "x": "age"}}
 
 Examples of INVALID (unrelated) queries:
 - "What's the weather today?"
