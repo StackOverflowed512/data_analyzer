@@ -36,7 +36,7 @@ class MistralClient:
         self.session.mount("https://", adapter)
         
     def create_chat_prompt(self, columns: List[str], user_query: str, sample_data) -> str:
-        """Create a prompt for conversational responses about the automobile dataset."""
+        """Create a prompt for conversational responses about the dataset."""
         columns_str = ", ".join(columns)
         
         # Convert sample data to string for context
@@ -67,7 +67,7 @@ Respond in a conversational, helpful manner. No JSON format needed - just natura
     
     def generate_chat_response(self, columns: List[str], user_query: str, sample_data=None) -> Dict[str, Any]:
         """
-        Generate a conversational response about the automobile dataset.
+        Generate a conversational response about the dataset.
         
         Args:
             columns: List of available dataset columns

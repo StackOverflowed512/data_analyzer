@@ -192,6 +192,13 @@ class DataProcessor:
             True if successful, False otherwise
         """
         try:
+            # Clear previous dataset state when loading a new file
+            if dataset_path is not None:
+                self.df = None
+                self.columns = []
+                self.current_dataset_id = None
+                self.current_dataset_name = None
+            
             # If no specific path provided, try loading from DB first
             if dataset_path is None:
                 if self.load_from_db():

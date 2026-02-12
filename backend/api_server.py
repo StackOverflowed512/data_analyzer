@@ -1,5 +1,5 @@
 """
-Flask API backend for automobile data analysis with Mistral AI.
+Flask API backend for data analysis with Mistral AI.
 """
 
 import sys
@@ -72,7 +72,7 @@ def initialize_app():
 def root():
     """Root endpoint with API information."""
     return jsonify({
-        "name": "Automobile Data Analysis API",
+        "name": "Data Analysis API",
         "version": "2.0.0",
         "status": "running",
         "endpoints": {
@@ -94,7 +94,7 @@ def root():
             "Smart data analysis with AI",
             "Export data and charts"
         ],
-        "description": "Enhanced API for analyzing automobile data with comprehensive chart support"
+        "description": "Enhanced API for analyzing data with comprehensive chart support"
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -103,7 +103,7 @@ def health_check():
     from datetime import datetime
     return jsonify({
         "status": "healthy",
-        "message": "Automobile Data Analysis API is running",
+        "message": "Data Analysis API is running",
         "timestamp": str(datetime.now()),
         "initialized": app_initialized
     })
@@ -275,7 +275,7 @@ def filter_dataset():
 
 @app.route('/api/chat', methods=['POST'])
 def chat_query():
-    """Handle general chat queries about the automobile dataset."""
+    """Handle general chat queries about the dataset."""
     if not app_initialized:
         return jsonify({"error": "Application not initialized"}), 400
     
@@ -404,9 +404,9 @@ def analyze_query():
             
             # Check if it's an unrelated query error vs other errors
             error_message = analysis_result["error"]
-            if ("unrelated to automobile" in error_message.lower() or 
-                "not about automobiles" in error_message.lower() or
-                "automobile data query" in error_message.lower()):
+            if ("unrelated to the dataset" in error_message.lower() or 
+                "not about the dataset" in error_message.lower() or
+                "data query" in error_message.lower()):
                 # Return 200 for unrelated queries (not a server error)
                 return jsonify({
                     "success": False,
@@ -509,7 +509,7 @@ def download_data():
         return jsonify({
             "success": True,
             "csv_content": csv_content,
-            "filename": "automobile_analysis.csv"
+            "filename": "data_analysis.csv"
         })
     
     except Exception as e:
@@ -564,6 +564,8 @@ def get_example_queries():
 @app.route('/api/upload-dataset', methods=['POST'])
 def upload_dataset():
     """Handle CSV dataset file upload."""
+    global app_initialized
+    
     try:
         if 'file' not in request.files:
             return jsonify({"success": False, "error": "No file provided"}), 400
@@ -586,6 +588,9 @@ def upload_dataset():
                 "success": False,
                 "error": "Failed to load dataset. Check CSV format and encoding. Try saving as UTF-8."
             }), 400
+
+        # Mark app as initialized after successful dataset load
+        app_initialized = True
 
         # Get dataset info
         info = data_processor.get_dataset_info()
@@ -712,7 +717,7 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    print("🚗 Starting Enhanced Automobile Data Analysis API...")
+    print("🚗 Starting Enhanced Data Analysis API...")
     print("📝 Available endpoints:")
     print("  GET  /api/health - Health check")
     print("  POST /api/initialize - Initialize application")
