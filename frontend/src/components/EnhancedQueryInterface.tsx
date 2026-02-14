@@ -13,6 +13,8 @@ import {
   BarChart2,
   Car,
   PieChart,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -66,6 +68,55 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   const [selectedChartType, setSelectedChartType] = useState<string | null>(
     null
   );
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = React.useRef<any>(null);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery(transcript);
+      setTimeout(() => {
+          // Optional: Auto-submit if high confidence?
+          // For now, let user verify
+      }, 500);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -190,10 +241,24 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask anything about the data..."
+            placeholder={isListening ? "Listening..." : "Ask anything about the data..."}
             onKeyDown={handleKeyDown}
             disabled={isAnalyzing}
+            className={isListening ? "border-red-500 ring-1 ring-red-500" : ""}
           />
+          <Button
+            onClick={toggleListening}
+            variant={isListening ? "destructive" : "secondary"}
+            disabled={isAnalyzing}
+            title={isListening ? "Stop listening" : "Start voice input"}
+            className="w-12"
+          >
+            {isListening ? (
+              <MicOff className="h-4 w-4 animate-pulse" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
           <Button
             onClick={() => {
               console.log("🔧 Button clicked!");
