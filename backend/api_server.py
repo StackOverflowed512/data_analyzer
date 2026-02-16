@@ -56,10 +56,9 @@ def initialize_app():
         validation = settings.validate_settings()
         if not validation["valid"]:
             return False
-        
-        # Load dataset
-        if not data_processor.load_dataset():
-            return False
+            
+        # We no longer automatically load dataset on startup
+        # processing will wait for user to upload or select a dataset
         
         app_initialized = True
         return True
@@ -159,7 +158,7 @@ def initialize():
             print("App initialization failed")
             return jsonify({
                 "success": False,
-                "error": "Failed to initialize application. Check API key and dataset."
+                "error": "Failed to initialize application. Check API key."
             }), 500
     
     except Exception as e:
@@ -174,6 +173,14 @@ def get_dataset_info():
     if not app_initialized:
         return jsonify({"error": "Application not initialized"}), 400
     
+    # Check if dataset is loaded
+    if data_processor.df is None:
+        return jsonify({
+            "success": False,
+            "error": "No dataset loaded",
+            "code": "NO_DATASET"
+        })
+
     try:
         info = data_processor.get_dataset_info()
         preview = data_processor.preview_data(10)

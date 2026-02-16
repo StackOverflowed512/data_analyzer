@@ -179,12 +179,20 @@ class ApiService {
 
     async getDatasetInfo(): Promise<{
         success: boolean;
-        info: DatasetInfo;
-        preview: any[];
+        info?: DatasetInfo;
+        preview?: any[];
         error?: string;
+        code?: string;
     }> {
-        const response = await this.axiosInstance.get("/api/dataset-info");
-        return response.data;
+        try {
+            const response = await this.axiosInstance.get("/api/dataset-info");
+            return response.data;
+        } catch (error: any) {
+            if (error.response && error.response.data && error.response.data.code === "NO_DATASET") {
+                return error.response.data;
+            }
+            throw error;
+        }
     }
 
     async analyzeQuery(

@@ -148,6 +148,30 @@ function App() {
             ])) as any;
 
             if (!datasetResult.success) {
+                if (datasetResult.code === "NO_DATASET") {
+                    console.log("⚠️ No dataset loaded, waiting for user input");
+                    setState((prev) => ({
+                        ...prev,
+                        isInitialized: true,
+                        isLoading: false,
+                        datasetInfo: null,
+                        datasetPreview: [], 
+                        currentDatasetName: "Select Dataset",
+                        showFileUploader: false // Don't auto-show, let user click
+                    }));
+                    
+                    toast("Please upload or select a dataset to begin", {
+                        icon: "📁",
+                        style: {
+                            background: "rgba(59, 130, 246, 0.9)",
+                            color: "white",
+                            backdropFilter: "blur(10px)",
+                        },
+                        duration: 5000,
+                    });
+                    return;
+                }
+                
                 throw new Error(
                     datasetResult.error || "Failed to load dataset"
                 );
@@ -601,6 +625,7 @@ function App() {
                             onDatasetView={handleOpenDatasetViewer}
                             isAnalyzing={state.isAnalyzing}
                             examples={state.exampleQueries}
+                            isDatasetLoaded={!!state.datasetInfo}
                         />
 
                         <div className="w-full px-4 py-6">

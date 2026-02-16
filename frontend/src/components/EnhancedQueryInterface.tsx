@@ -32,6 +32,7 @@ interface EnhancedQueryInterfaceProps {
   onDatasetView: () => void;
   isAnalyzing: boolean;
   examples: ExampleQuery[];
+  isDatasetLoaded: boolean;
 }
 
 const CHART_TYPES = [
@@ -63,6 +64,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   onDatasetView,
   isAnalyzing,
   examples,
+  isDatasetLoaded,
 }) => {
   const [query, setQuery] = useState("");
   const [selectedChartType, setSelectedChartType] = useState<string | null>(
@@ -73,6 +75,8 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   const recognitionRef = React.useRef<any>(null);
 
   const toggleListening = () => {
+    if (!isDatasetLoaded) return;
+    
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -119,13 +123,15 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && isDatasetLoaded) {
       e.preventDefault();
       handleSubmit();
     }
   };
 
   const handleSubmit = () => {
+    if (!isDatasetLoaded) return;
+    
     console.log("🔧 Submit clicked:", {
       query,
       selectedChartType,
@@ -183,24 +189,34 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
   };
 
   return (
-    <Card className="w-full">
+    <Card className={`w-full ${!isDatasetLoaded ? 'opacity-80' : ''}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <BarChart3 className="h-5 w-5" />
           Ask Your Questions About the Dataset
         </CardTitle>
-        <Button
-          onClick={onDatasetView}
-          variant="outline"
-          size="sm"
-          className="w-fit"
-        >
-          <Database className="h-4 w-4 mr-2" />
-          📊 View Dataset
-        </Button>
-        <Badge variant="default" className="w-fit">
-          System Ready • All Features Operational
-        </Badge>
+        <div className="flex gap-2">
+            <Button
+            onClick={onDatasetView}
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            disabled={!isDatasetLoaded}
+            >
+            <Database className="h-4 w-4 mr-2" />
+            📊 View Dataset
+            </Button>
+            {!isDatasetLoaded && (
+                <Badge variant="destructive" className="animate-pulse">
+                    ⚠️ No Dataset Selected
+                </Badge>
+            )}
+             {isDatasetLoaded && (
+                <Badge variant="default" className="w-fit">
+                System Ready • All Features Operational
+                </Badge>
+            )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Chart Type Selection */}
@@ -209,7 +225,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
             📊 Optional: Select a chart type for specific visualization, or let
             the AI choose automatically:
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 ${!isDatasetLoaded ? 'pointer-events-none opacity-50' : ''}`}>
             {CHART_TYPES.map((chart) => (
               <Button
                 key={chart.id}
@@ -220,6 +236,7 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
                   )
                 }
                 className="h-auto p-3 flex flex-col items-center text-center"
+                disabled={!isDatasetLoaded}
               >
                 <span className="font-medium text-sm">{chart.name}</span>
                 <span className="text-xs text-gray-500">
@@ -237,19 +254,24 @@ export const EnhancedQueryInterface: React.FC<EnhancedQueryInterfaceProps> = ({
         </div>
 
         {/* Query Input */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative">
+          {!isDatasetLoaded && (
+             <div className="absolute inset-0 z-10 bg-white/5 backdrop-blur-[1px] rounded-lg flex items-center justify-center text-sm font-semibold text-white">
+                 Please select or upload a dataset to start querying
+             </div>
+          )}
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={isListening ? "Listening..." : "Ask anything about the data..."}
             onKeyDown={handleKeyDown}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || !isDatasetLoaded}
             className={isListening ? "border-red-500 ring-1 ring-red-500" : ""}
           />
           <Button
             onClick={toggleListening}
             variant={isListening ? "destructive" : "secondary"}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || !isDatasetLoaded}
             title={isListening ? "Stop listening" : "Start voice input"}
             className="w-12"
           >
