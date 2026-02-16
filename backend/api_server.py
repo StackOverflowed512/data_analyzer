@@ -725,6 +725,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     print("🚗 Starting Enhanced Data Analysis API...")
+    print("🚀 SERVER VERSION: NO_AUTO_LOAD (v2.1)")
     print("📝 Available endpoints:")
     print("  GET  /api/health - Health check")
     print("  POST /api/initialize - Initialize application")
@@ -742,13 +743,14 @@ if __name__ == '__main__':
     print("  🔍 Dataset viewing and exploration")
     print("  🎯 Charts only when explicitly requested")
     print("  📱 Enhanced data filtering and search")
+    print("  🚫 No default dataset loaded on startup")
     
     # Auto-initialize the application
     print("🔧 Auto-initializing application...")
     if initialize_app():
         print("✅ Application initialized successfully!")
     else:
-        print("❌ Failed to initialize application. Check API key and dataset.")
+        print("❌ Failed to initialize application. Check API key.")
     
     # Use environment variable for port (deployment-friendly)
     import os

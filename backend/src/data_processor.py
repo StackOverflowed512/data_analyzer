@@ -193,18 +193,20 @@ class DataProcessor:
         """
         try:
             # Clear previous dataset state when loading a new file
+            # Clear previous dataset state when loading a new file
             if dataset_path is not None:
                 self.df = None
                 self.columns = []
                 self.current_dataset_id = None
                 self.current_dataset_name = None
             
-            # If no specific path provided, try loading from DB first
+            # If no specific path provided, do NOTHING.
+            # We want explicit loading only.
             if dataset_path is None:
-                if self.load_from_db():
-                    return True
+                logger.warning("load_dataset called with None path. Skipping load.")
+                return False
             
-            path_to_load = dataset_path or self.dataset_path
+            path_to_load = dataset_path
             
             if not Path(path_to_load).exists():
                 logger.error(f"Dataset file not found: {path_to_load}")
