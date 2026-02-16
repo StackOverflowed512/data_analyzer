@@ -60,6 +60,9 @@ def initialize_app():
         # We no longer automatically load dataset on startup
         # processing will wait for user to upload or select a dataset
         
+        # Explicitly clear any lingering dataset from previous sessions/reloads
+        data_processor.clear_dataset()
+        
         app_initialized = True
         return True
     

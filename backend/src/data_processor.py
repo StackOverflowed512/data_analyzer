@@ -191,14 +191,28 @@ class DataProcessor:
         Returns:
             True if successful, False otherwise
         """
+    def clear_dataset(self):
+        """Clear the currently loaded dataset."""
+        logger.info("Clearing dataset state")
+        self.df = None
+        self.columns = []
+        self.current_dataset_id = None
+        self.current_dataset_name = None
+
+    def load_dataset(self, dataset_path: Optional[str] = None) -> bool:
+        """
+        Load the automobile dataset from CSV file.
+        
+        Args:
+            dataset_path: Path to the CSV file (uses default if not provided)
+        
+        Returns:
+            True if successful, False otherwise
+        """
         try:
             # Clear previous dataset state when loading a new file
-            # Clear previous dataset state when loading a new file
             if dataset_path is not None:
-                self.df = None
-                self.columns = []
-                self.current_dataset_id = None
-                self.current_dataset_name = None
+                self.clear_dataset()
             
             # If no specific path provided, do NOTHING.
             # We want explicit loading only.
